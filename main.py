@@ -1,6 +1,7 @@
 import preprocess
 import vectorize
 import model
+import model_opt
 
 # ---- DESCOMENTAR PROCESOS QUE SE REQUIERAN ---
 
@@ -20,4 +21,5 @@ import model
 # y el batch_size para repartir la carga de trabajo (por defecto: 64)
 
 # ENTRENAR MODELO
-model.train("data/VECTOR_BERTuit.csv")
+model.train("data/test_CPU.csv")
+model_opt.train("data/test_CPU.csv")
