@@ -107,12 +107,12 @@ def save_cluster_vectors_to_csv(all_points, clusters, max_per_cluster=10, output
     print(f"Vectores guardados en {output_csv_path}")
 
 
-def save_cluster_texts_to_csv(cluster_file_path, text_file_path, output_csv_path="cluster_texts.csv"):
+def save_cluster_texts_to_csv(cluster_file_path, text_file_path, output_csv_path="cluster_texts.csv", c=4):
     # Leer el archivo que contiene los cluster IDs y los índices
     cluster_data = pd.read_csv(cluster_file_path, header=None)
 
     # Leer el archivo que contiene los textos (asumiendo que tiene un índice que corresponde a las instancias)
-    texts = pd.read_csv(text_file_path, header=None)
+    texts = pd.read_csv(text_file_path, header=None, delimiter='|')[c].tolist()
 
     # Crear una lista para almacenar los resultados
     csv_rows = []
