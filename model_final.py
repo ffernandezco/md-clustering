@@ -120,11 +120,11 @@ def save_cluster_texts_to_csv(cluster_file_path, text_file_path, output_csv_path
     # Iterar sobre cada fila en el archivo de clusters
     for _, row in cluster_data.iterrows():
         cluster_id = row[0]
-        index = row[1]
+        index = int(row[1])
 
         # Obtener el texto asociado al índice
         if index < len(texts):
-            associated_text = texts.iloc[index, 0]  # Asumiendo que el texto está en la primera columna
+            associated_text = texts[index]  # Asumiendo que el texto está en la primera columna
             # Agregar el clúster y el texto a la fila
             csv_rows.append([cluster_id, associated_text])
 
