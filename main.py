@@ -21,13 +21,13 @@ import model_final
 # y el batch_size para repartir la carga de trabajo (por defecto: 64)
 
 # ENTRENAR MODELO
-# all_points = model_final.read_csv("data/VECTOR_BERTuit.csv")
+all_points = model_final.read_csv("data/VECTOR_BERTuit.csv")
 configuration = [14, 20]
-# clusters = model_final.train(all_points, configuration[0], configuration[1])
-# model_final.plot_clusters(all_points, clusters, configuration)
-# model_final.save_cluster_vectors_to_csv(all_points, clusters, max_per_cluster=5,
-#                                         output_csv_path="data/" + str(configuration[0]) + "," + str(
-#                                             configuration[1]) + "cluster_vectors.csv")
+clusters = model_final.train(all_points, configuration[0], configuration[1])
+model_final.plot_clusters(all_points, clusters, configuration)
+model_final.save_cluster_vectors_to_csv(all_points, clusters, max_per_cluster=5,
+                                        output_csv_path="data/" + str(configuration[0]) + "," + str(
+                                            configuration[1]) + "cluster_vectors.csv")
 model_final.save_cluster_texts_to_csv("data/" + str(configuration[0]) + "," + str(configuration[1]) +
                                       "cluster_vectors.csv", 'data/DataI_MD_POST.csv', "data/" +
                                       str(configuration[0]) + "," + str(configuration[1]) + "cluster_texts.csv")
