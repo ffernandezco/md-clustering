@@ -105,3 +105,29 @@ def save_cluster_vectors_to_csv(all_points, clusters, max_per_cluster=10, output
     # Guardar en un archivo CSV sin encabezado
     pd.DataFrame(csv_rows).to_csv(output_csv_path, index=False, header=False)
     print(f"Vectores guardados en {output_csv_path}")
+
+
+def save_cluster_texts_to_csv(cluster_file_path, text_file_path, output_csv_path="cluster_texts.csv"):
+    # Leer el archivo que contiene los cluster IDs y los índices
+    cluster_data = pd.read_csv(cluster_file_path, header=None)
+
+    # Leer el archivo que contiene los textos (asumiendo que tiene un índice que corresponde a las instancias)
+    texts = pd.read_csv(text_file_path, header=None)
+
+    # Crear una lista para almacenar los resultados
+    csv_rows = []
+
+    # Iterar sobre cada fila en el archivo de clusters
+    for _, row in cluster_data.iterrows():
+        cluster_id = row[0]
+        index = row[1]
+
+        # Obtener el texto asociado al índice
+        if index < len(texts):
+            associated_text = texts.iloc[index, 0]  # Asumiendo que el texto está en la primera columna
+            # Agregar el clúster y el texto a la fila
+            csv_rows.append([cluster_id, associated_text])
+
+    # Guardar en un archivo CSV sin encabezado
+    pd.DataFrame(csv_rows).to_csv(output_csv_path, index=False, header=False)
+    print(f"Textos asociados guardados en {output_csv_path}")

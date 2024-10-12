@@ -28,3 +28,6 @@ model_final.plot_clusters(all_points, clusters, configuration)
 model_final.save_cluster_vectors_to_csv(all_points, clusters, max_per_cluster=5,
                                         output_csv_path="data/" + str(configuration[0]) + "," + str(
                                             configuration[1]) + "cluster_vectors.csv")
+model_final.save_cluster_texts_to_csv("data/" + str(configuration[0]) + "," + str(configuration[1]) +
+                                      "cluster_vectors.csv", 'data/DataI_MD_POST.csv', "data/" +
+                                      str(configuration[0]) + "," + str(configuration[1]) + "cluster_texts.csv")
