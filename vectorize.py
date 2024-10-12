@@ -10,7 +10,7 @@ def vectorize(input_file, output_file, enable_cuda=False, model="AIDA-UPM/BERTui
     # Cargar el tokenizer y el modelo de Bertweet
     device = torch.device('cuda' if torch.cuda.is_available() and enable_cuda else 'cpu')
     tokenizer = AutoTokenizer.from_pretrained(model)
-    model = AutoModel.from_pretrained(model, from_tf).to(device)
+    model = AutoModel.from_pretrained(model, from_tf=from_tf).to(device)
 
     # Leer el archivo de input (suponemos que no tiene header)
     data = pd.read_csv(input_file, header=None, delimiter='|')

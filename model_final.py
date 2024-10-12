@@ -8,16 +8,16 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
 
-def train(input_vector_path):
-    min_distance = 15.6
-    near_point_count = 30
-
+def read_csv(input_vector_path):
     # Cargar datos
     data = pd.read_csv(input_vector_path, header=None, delimiter=',')
-    all_points = data.values
+    return data.values
+
+
+def train(all_points, min_distance=15, near_point_count=25):
 
     # Crear NearestNeighbors para búsqueda rápida de vecinos
-    neighbors_model = NearestNeighbors(radius=min_distance, algorithm='auto', metric='euclidean', n_jobs=3)
+    neighbors_model = NearestNeighbors(radius=min_distance, algorithm='auto', metric='euclidean', n_jobs=-1)
     neighbors_model.fit(all_points)
 
     # Precalcular vecinos para todos los puntos
@@ -50,10 +50,10 @@ def train(input_vector_path):
 
         label_num += 1  # Incrementar el contador de etiquetas para el siguiente cluster
 
-    return labels, all_points
+    return labels
 
 
-def plot_clusters(all_points, clusters):
+def plot_clusters(all_points, clusters, conf):
     # Reducir las dimensiones a 2D si es necesario
     if all_points.shape[1] > 2:
         pca = PCA(n_components=2)
@@ -76,9 +76,32 @@ def plot_clusters(all_points, clusters):
         mask = (clusters == cluster_id)
         plt.scatter(all_points_2d[mask, 0], all_points_2d[mask, 1], s=50, c=[color], label=label, alpha=0.6)
 
-    plt.title("Clusters Visualized")
+    plt.title("Clusters Visualized   ε:" + str(conf[0]) + " minPts:" + str(conf[1]))
     plt.xlabel("Principal Component 1")
     plt.ylabel("Principal Component 2")
     plt.legend()
     plt.grid(True)
     plt.show()
+
+
+def save_cluster_vectors_to_csv(all_points, clusters, max_per_cluster=10, output_csv_path="cluster_vectors.csv"):
+    cluster_dict = defaultdict(list)
+
+    # Agrupar índices por clúster, incluyendo ruido (-1)
+    for idx, cluster_id in enumerate(clusters):
+        cluster_dict[cluster_id].append(idx)
+
+    # Crear una lista para almacenar los resultados
+    csv_rows = []
+
+    # Guardar hasta 'max_per_cluster' vectores por clúster
+    for cluster_id, indices in cluster_dict.items():
+        # Limitar la cantidad de vectores a 'max_per_cluster'
+        for idx in indices[:max_per_cluster]:
+            # Agregar el clúster, el índice de instancia y el vector
+            row = [cluster_id, idx] + list(all_points[idx])
+            csv_rows.append(row)
+
+    # Guardar en un archivo CSV sin encabezado
+    pd.DataFrame(csv_rows).to_csv(output_csv_path, index=False, header=False)
+    print(f"Vectores guardados en {output_csv_path}")
