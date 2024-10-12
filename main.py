@@ -1,7 +1,7 @@
 import preprocess
 import vectorize
 import model
-import model_opt
+import model_final
 
 # ---- DESCOMENTAR PROCESOS QUE SE REQUIERAN ---
 
@@ -21,5 +21,6 @@ import model_opt
 # y el batch_size para repartir la carga de trabajo (por defecto: 64)
 
 # ENTRENAR MODELO
-model.train("data/test_CPU.csv")
-model_opt.train("data/test_CPU.csv")
+# model.train("data/test_CPU.csv")
+clusters, all_points = model_final.train("data/VECTOR_BERTuit.csv")
+model_final.plot_clusters(all_points, clusters)
