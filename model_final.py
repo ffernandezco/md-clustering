@@ -65,7 +65,8 @@ def train(all_points, min_distance=15, near_point_count=25):
                         stack.append(neighbor)  # Agregar a la pila para procesar
 
         label_num += 1  # Incrementar el contador de etiquetas para el siguiente cluster
-        print("Modelo entrenado correctamente.")
+
+    print("Modelo entrenado correctamente.")
 
     return labels
 
@@ -210,7 +211,7 @@ def evaluate_clusters(clusters, csv_file, binary_columns, output_file, eps, min_
         valor de minPts (near_point_count)
     """
     # Leer el archivo CSV
-    data = pd.read_csv(csv_file, header=None, delimiter='|')
+    data = pd.read_csv(csv_file, header=None, delimiter=',')
 
     # Seleccionar las columnas de variables binarias
     binary_vars = data.iloc[:, binary_columns]
@@ -248,3 +249,13 @@ def evaluate_clusters(clusters, csv_file, binary_columns, output_file, eps, min_
         f.write(f"Avg_Chi2={avg_chi2:.4f}, Avg_p={avg_p:.4f}\n")
 
     print(f"Resultados guardados en {output_file} correctamente.")
+
+    # Imprimir un ejemplo por cada cluster
+    for cluster_id in set(clusters):  # Usa set para obtener los IDs de cluster únicos
+        # Obtener un ejemplo del cluster
+        example = data[clusters == cluster_id].iloc[0]  # Tomar el primer ejemplo del cluster
+        # Obtener las variables binarias específicas
+        binary_values = example[binary_columns].values
+        # Imprimir el resultado
+        print(f"Cluster: {cluster_id}, Instancia: {example.name}, Variables: {binary_values}")
+
