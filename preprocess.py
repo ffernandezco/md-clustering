@@ -1,4 +1,5 @@
 import csv
+import pandas as pd
 
 
 class Instance:
@@ -106,3 +107,17 @@ def preprocess(input_file, output_file):
                 writer.writerow(new_row)
 
     print("Archivo postprocesado generado correctamente.")
+
+
+def divide_csv(input_file, output_file1, output_file2, percentage):
+    data = pd.read_csv(input_file)
+
+    # Calcular el número de filas que se tienen que recortar
+    split_point = int(len(data) * percentage)
+    data_part1 = data[:split_point]
+    data_part2 = data[split_point:]
+
+    data_part1.to_csv(output_file1, index=False)
+    data_part2.to_csv(output_file2, index=False)
+
+    print(f"Archivo dividido en {output_file1} y {output_file2} correctamente.")
