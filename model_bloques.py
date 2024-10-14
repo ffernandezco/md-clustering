@@ -23,23 +23,22 @@ def euclidean_distance(a, b):
     return np.linalg.norm(a - b)
 
 
+
+def compute_distances(i, all_points, block_size, min_distance):
+    block_start = max(0, i - block_size)
+    block_end = min(all_points.shape[0], i + block_size + 1)
+
+    distances = np.linalg.norm(all_points[block_start:block_end] - all_points[i], axis=1)
+    neighbor_indices = np.where(distances <= min_distance)[0] + block_start
+
+    return neighbor_indices[neighbor_indices != i]  # Excluir el punto mismo
+
 def find_neighbors(all_points, min_distance, near_point_count):
-    neighbors = []
     n_points = all_points.shape[0]
+    block_size = 1000  # Tamaño del bloque
 
-    # Búsqueda por bloques
-    block_size = 1000  # Tamaño del bloque, ajusta según sea necesario
-
-    for i in tqdm(range(n_points), desc="Finding neighbors"):
-        block_start = max(0, i - block_size)
-        block_end = min(n_points, i + block_size + 1)
-
-        distances = np.linalg.norm(all_points[block_start:block_end] - all_points[i], axis=1)
-
-        # Filtrar vecinos dentro del radio especificado
-        neighbor_indices = np.where(distances <= min_distance)[0] + block_start
-
-        neighbors.append(neighbor_indices[neighbor_indices != i])  # Excluir el punto mismo
+    # Uso de joblib para paralelizar el cálculo
+    neighbors = Parallel(n_jobs=-1)(delayed(compute_distances)(i, all_points, block_size, min_distance) for i in tqdm(range(n_points), desc="Finding neighbors"))
 
     return neighbors
 
