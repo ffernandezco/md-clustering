@@ -2,6 +2,7 @@ from collections import defaultdict, deque
 import numpy as np
 import pandas as pd
 from scipy.stats import chi2_contingency
+from sklearn.metrics import adjusted_rand_score, silhouette_score, davies_bouldin_score
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -21,11 +22,15 @@ def read_csv(input_vector_path):
     return data.values
 
 
-def train(all_points, min_distance=15, near_point_count=25):
+def train(all_points, csv_file, output_file, min_distance=15, near_point_count=25):
     """
-    Entrena el modelo de clustering utilizando el algoritmo DBSCAN.
+    Entrena el modelo de clustering utilizando el algoritmo DBSCAN y calcula las métricas de calidad.
     :param all_points: numpy.ndarray
         Matriz de puntos a ser agrupados, donde cada fila representa un vector.
+    :param csv_file: str
+        Ruta del archivo CSV que contiene las variables binarias.
+    :param output_file: str
+        Ruta del archivo de salida para guardar los resultados.
     :param min_distance: float, opcional
         Distancia máxima entre dos puntos para ser considerados vecinos.
         El valor predeterminado es 15.
@@ -36,7 +41,7 @@ def train(all_points, min_distance=15, near_point_count=25):
         Etiquetas de los clusters asignadas a cada punto (incluyendo -1 para ruido).
     """
     # Precalcular vecinos para todos los puntos
-    neighbors_model = NearestNeighbors(radius=min_distance, algorithm='auto', metric='euclidean', n_jobs=-1)
+    neighbors_model = NearestNeighbors(radius=min_distance, algorithm='brute', metric='euclidean', n_jobs=-1)
     neighbors_model.fit(all_points)
     neighbors = neighbors_model.radius_neighbors(all_points, return_distance=False)
     near_points_count = np.array([len(n) for n in neighbors])
@@ -68,7 +73,14 @@ def train(all_points, min_distance=15, near_point_count=25):
 
     print("Modelo entrenado correctamente.")
 
-    return labels
+    # Calcular Silhouette Index y Davies-Bouldin Index
+    silhouette_avg = silhouette_score(all_points, labels) if len(set(labels)) > 1 else -1
+    davies_bouldin = davies_bouldin_score(all_points, labels) if len(set(labels)) > 1 else 0
+
+    # Evaluar clusters
+    evaluation = evaluate_clusters(labels, csv_file, output_file, min_distance, near_point_count, silhouette_avg, davies_bouldin)
+
+    return labels, evaluation
 
 
 def plot_clusters(all_points, clusters, conf, output_file):
@@ -194,68 +206,82 @@ def save_cluster_texts_to_csv(cluster_file_path, text_file_path, output_csv_path
     print(f"Textos asociados guardados en {output_csv_path} correctamente.")
 
 
-def evaluate_clusters(clusters, csv_file, binary_columns, output_file, eps, min_points):
+def evaluate_clusters(clusters, csv_file, output_file, eps, min_points, silhouette_avg, davies_bouldin):
     """
-    Función para evaluar la correlación entre clusters y variables binarias y guardar los resultados en un archivo.
+    Función para evaluar la correlación entre clusters y variables binarias y guardar las tablas de contingencia en un archivo.
     :param clusters: numpy.ndarray
         array con los clusters predichos
     :param csv_file: str
         ruta del archivo CSV que contiene las variables binarias
-    :param binary_columns: array
-        lista con los índices de las columnas binarias
     :param output_file: str
         ruta del archivo de salida para guardar los resultados
     :param eps: float
         valor de epsilon (min_distance)
     :param min_points: int
         valor de minPts (near_point_count)
+    :param silhouette_avg: float
+        Valor del Silhouette Index calculado.
+    :param davies_bouldin: float
+        Valor del Davies-Bouldin Index calculado.
     """
     # Leer el archivo CSV
     data = pd.read_csv(csv_file, header=None, delimiter=',')
 
-    # Seleccionar las columnas de variables binarias
-    binary_vars = data.iloc[:, binary_columns]
-
-    # Inicializar variables para la evaluación general
-    total_chi2 = 0
-    total_p = 0
-    num_vars = len(binary_columns)
+    # Seleccionar las columnas de variables binarias (siempre 1, 2 y 3)
+    binary_vars = data.iloc[:, [1, 2, 3]]
 
     # Abrir el archivo de salida para escribir los resultados
     with open(output_file, 'w') as f:
         # Guardar la configuración actual
         f.write(f"# Configuración usada: eps={eps}, minPts={min_points}\n")
 
+        ari_scores = []
+
         # Calcular la tabla de contingencia entre clusters y cada variable binaria
         for column in binary_vars.columns:
-            contingency_table = pd.crosstab(clusters, binary_vars[column])
+            if column == 3:  # Supongamos que la variable 3 es la columna 2
+                # Modificar los valores de la columna para fusionar 1 y 2
+                modified_column = binary_vars[column].replace({1: 1, 2: 1})  # Fusionar 1 y 2
+                contingency_table = pd.crosstab(clusters, modified_column)
+                contingency_table.index.name = "real-->"
+                contingency_table.columns.name = ""
+            else:
+                contingency_table = pd.crosstab(clusters, binary_vars[column])
+                contingency_table.index.name = "real-->"
+                contingency_table.columns.name = ""
 
-            # Aplicar el test de chi-cuadrado
-            chi2, p, dof, expected = chi2_contingency(contingency_table)
+            # Guardar la tabla de contingencia en el archivo
+            f.write(f"\n# Tabla de contingencia para la variable {column}:\n")
+            f.write(f"{contingency_table.to_string()}\n")
 
-            # Sumar los estadísticos para la evaluación general
-            total_chi2 += chi2
-            total_p += p
+            # Calcular el ARI
+            ari = adjusted_rand_score(binary_vars[column], clusters)
+            ari_scores.append(ari)
 
-            # Guardar resultados individuales en el archivo
-            f.write(f"Chi2_{column}={chi2:.4f}, p_{column}={p:.4f}\n")
+            # Guardar el ARI en el archivo
+            f.write(f"# ARI para la variable {column}: {ari:.4f}\n")
 
-        # Evaluación general (promedios)
-        avg_chi2 = total_chi2 / num_vars
-        avg_p = total_p / num_vars
+        # Calcular el ARI medio
+        mean_ari = sum(ari_scores) / len(ari_scores)
+        f.write(f"\n# ARI medio: {mean_ari:.4f}\n")
 
-        # Guardar resultados generales en el archivo
-        f.write(f"\n# Evaluación general de las {num_vars} variables:\n")
-        f.write(f"Avg_Chi2={avg_chi2:.4f}, Avg_p={avg_p:.4f}\n")
+        # Guardar métricas de calidad
+        if silhouette_avg is not None:
+            f.write(f"# Silhouette Index: {silhouette_avg:.4f}\n")
+        else:
+            f.write("# Silhouette Index: No se puede calcular, solo un cluster.\n")
 
-    print(f"Resultados guardados en {output_file} correctamente.")
+        if davies_bouldin is not None:
+            f.write(f"# Davies-Bouldin Index: {davies_bouldin:.4f}\n")
+        else:
+            f.write("# Davies-Bouldin Index: No se puede calcular, solo un cluster.\n")
 
-    # Imprimir un ejemplo por cada cluster
-    for cluster_id in set(clusters):  # Usa set para obtener los IDs de cluster únicos
-        # Obtener un ejemplo del cluster
-        example = data[clusters == cluster_id].iloc[0]  # Tomar el primer ejemplo del cluster
-        # Obtener las variables binarias específicas
-        binary_values = example[binary_columns].values
-        # Imprimir el resultado
-        print(f"Cluster: {cluster_id}, Instancia: {example.name}, Variables: {binary_values}")
+    print(f"Tablas de contingencia y métricas de calidad guardadas en {output_file} correctamente.")
 
+    # Normalización de los resultados
+    normalized_ari = (mean_ari - 0) / (1 - 0)  # Normalizar ARI entre 0 y 1
+    normalized_silhouette = (silhouette_avg - (-1)) / (1 - (-1))  # Normalizar Silhouette Index entre 0 y 1
+    normalized_davies = (davies_bouldin - 0) / (2 - 0)  # Normalizar Davies-Bouldin entre 0 y 2
+
+    # Calcular el resultado final
+    return (normalized_ari + normalized_silhouette - normalized_davies) / 2  # Promediar las métricas normalizadas
