@@ -8,20 +8,20 @@ import model_final
 # ---- DESCOMENTAR PROCESOS QUE SE REQUIERAN ----
 
 # PREPROCESADO
-input_file = 'data/DataI_MD.csv'  # Ruta al archivo CSV original
-output_file = 'data/DataI_MD_POST.csv'
-preprocess.preprocess(input_file, output_file)
+# input_file = 'data/DataI_MD.csv'  # Ruta al archivo CSV original
+# output_file = 'data/DataI_MD_POST.csv'
+# preprocess.preprocess(input_file, output_file)
 
 
 # TOKENIZADO + VECTORIZACIÖN
-input_csv_path = 'data/DataI_MD_POST.csv'
-output_csv_path = 'data/DataI_MD_VECTOR.csv'
-# Se puede especificar el modelo (por defecto: AIDA-UPM/BERTuit-base),
-# from_tf (por defecto: True), la columna de procesado del csv de entrada (por defecto: 4)
-# y el batch_size para repartir la carga de trabajo (por defecto: 64)
-vectorize.vectorize(input_csv_path, output_csv_path, True)
+# input_csv_path = 'data/DataI_MD_POST.csv'
+# output_csv_path = 'data/DataI_MD_VECTOR.csv'
+# # Se puede especificar el modelo (por defecto: AIDA-UPM/BERTuit-base),
+# # from_tf (por defecto: True), la columna de procesado del csv de entrada (por defecto: 4)
+# # y el batch_size para repartir la carga de trabajo (por defecto: 64)
+# vectorize.vectorize(input_csv_path, output_csv_path, True)
 preprocess.divide_csv('data/DataI_MD_VECTOR.csv', 'data/VECTOR_BERTuit90%.csv', 'data/VECTOR_test.csv', 90)
-preprocess.divide_csv('data/DataI_MD_POST.csv', 'data/DataI_MD_POST90%.csv', 'data/DataI_MD_POST10%.csv', 90)
+preprocess.divide_csv('data/DataI_MD_POST.csv', 'data/DataI_MD_POST90%.csv', 'data/DataI_MD_POST10%.csv', 90, delimiter="|")
 
 
 # BUSCAR MEJOR CONFIGURACIÓN
@@ -41,7 +41,7 @@ best_configuration = {
 }
 
 # Probar diferentes configuraciones de PCA
-for n_components in [100, 250, 500, 700]:  # Cambia los valores según sea necesario
+for n_components in [700]:  # Cambia los valores según sea necesario
     pca = PCA(n_components=n_components)
     reduced_instances = pca.fit_transform(instances)
 
