@@ -22,7 +22,7 @@ def read_csv(input_vector_path):
     return data.values
 
 
-def train(all_points, csv_file, output_file, min_distance=15, near_point_count=25):
+def train(all_points, csv_file, output_file, min_distance=15, near_point_count=25, metric="euclidean"):
     """
     Entrena el modelo de clustering utilizando el algoritmo DBSCAN y calcula las métricas de calidad.
     :param all_points: numpy.ndarray
@@ -37,11 +37,13 @@ def train(all_points, csv_file, output_file, min_distance=15, near_point_count=2
     :param near_point_count: int, opcional
         Cantidad mínima de puntos vecinos requeridos para considerar un punto como núcleo.
         El valor predeterminado es 25.
+    :param metric: str, opcional
+        Métrica de distancias
     :return: numpy.ndarray
         Etiquetas de los clusters asignadas a cada punto (incluyendo -1 para ruido).
     """
     # Precalcular vecinos para todos los puntos
-    neighbors_model = NearestNeighbors(radius=min_distance, algorithm='brute', metric='euclidean', n_jobs=-1)
+    neighbors_model = NearestNeighbors(radius=min_distance, algorithm='brute', metric=metric, n_jobs=-1)
     neighbors_model.fit(all_points)
     neighbors = neighbors_model.radius_neighbors(all_points, return_distance=False)
     near_points_count = np.array([len(n) for n in neighbors])
@@ -74,11 +76,15 @@ def train(all_points, csv_file, output_file, min_distance=15, near_point_count=2
     print("Modelo entrenado correctamente.")
 
     # Calcular Silhouette Index y Davies-Bouldin Index
-    silhouette_avg = silhouette_score(all_points, labels) if len(set(labels)) > 1 else -1
-    davies_bouldin = davies_bouldin_score(all_points, labels) if len(set(labels)) > 1 else 0
+    if len(set(labels)) > 1:
+        silhouette_avg = silhouette_score(all_points, labels)
+        davies_bouldin = davies_bouldin_score(all_points, labels)
+    else:
+        silhouette_avg = None
+        davies_bouldin = None
 
     # Evaluar clusters
-    evaluation = evaluate_clusters(labels, csv_file, output_file, min_distance, near_point_count, silhouette_avg, davies_bouldin)
+    evaluation = evaluate_clusters(labels, csv_file, output_file, min_distance, near_point_count, silhouette_avg, davies_bouldin, metric)
 
     return labels, evaluation
 
@@ -90,8 +96,8 @@ def plot_clusters(all_points, clusters, conf, output_file):
         Matriz de puntos que han sido agrupados.
     :param clusters: numpy.ndarray
         Etiquetas de los clusters asignadas a cada punto.
-    :param conf: tuple
-        Tupla que contiene la configuración del modelo (eps, minPts).
+    :param conf: triple
+        Triple que contiene la configuración del modelo (eps, minPts, metric).
     :param output_file: str
         Ruta del archivo donde se guardará la visualización del gráfico.
     """
@@ -117,7 +123,7 @@ def plot_clusters(all_points, clusters, conf, output_file):
         mask = (clusters == cluster_id)
         plt.scatter(all_points_2d[mask, 0], all_points_2d[mask, 1], s=50, c=[color], label=label, alpha=0.6)
 
-    plt.title("Clusters Visualizados (con PCA=2)   ε:" + str(conf[0]) + " minPts:" + str(conf[1]))
+    plt.title("Clusters Visualizados (con PCA=2)   ε:" + str(conf[0]) + " minPts:" + str(conf[1]) + " métrica:" + str(conf[2]))
     plt.xlabel("Componente 1")
     plt.ylabel("Componente 2")
     plt.legend()
@@ -206,7 +212,7 @@ def save_cluster_texts_to_csv(cluster_file_path, text_file_path, output_csv_path
     print(f"Textos asociados guardados en {output_csv_path} correctamente.")
 
 
-def evaluate_clusters(clusters, csv_file, output_file, eps, min_points, silhouette_avg, davies_bouldin):
+def evaluate_clusters(clusters, csv_file, output_file, eps, min_points, silhouette_avg, davies_bouldin,  metric, vars=[1, 2, 3]):
     """
     Función para evaluar la correlación entre clusters y variables binarias y guardar las tablas de contingencia en un archivo.
     :param clusters: numpy.ndarray
@@ -223,19 +229,22 @@ def evaluate_clusters(clusters, csv_file, output_file, eps, min_points, silhouet
         Valor del Silhouette Index calculado.
     :param davies_bouldin: float
         Valor del Davies-Bouldin Index calculado.
+    :param metric: str
+        Valor de la métrica de distancia utilizada
+    :param vars: list
+        Incices del archivo csv de las métricas externas
     """
     # Leer el archivo CSV
     data = pd.read_csv(csv_file, header=None, delimiter=',')
 
-    # Seleccionar las columnas de variables binarias (siempre 1, 2 y 3)
-    binary_vars = data.iloc[:, [1, 2, 3]]
+    # Seleccionar las columnas de variables binarias
+    binary_vars = data.iloc[:, vars]
+    class_to_cluster_evals = []
 
     # Abrir el archivo de salida para escribir los resultados
     with open(output_file, 'w') as f:
         # Guardar la configuración actual
-        f.write(f"# Configuración usada: eps={eps}, minPts={min_points}\n")
-
-        ari_scores = []
+        f.write(f"# Configuración usada: eps={eps}, minPts={min_points}, métrica={metric}\n")
 
         # Calcular la tabla de contingencia entre clusters y cada variable binaria
         for column in binary_vars.columns:
@@ -250,20 +259,18 @@ def evaluate_clusters(clusters, csv_file, output_file, eps, min_points, silhouet
                 contingency_table.index.name = "real-->"
                 contingency_table.columns.name = ""
 
+            # Calcular class-to-cluster evaluation
+            total_instances = contingency_table.values.sum()
+            max_per_cluster = contingency_table.max(axis=1).sum()
+            accuracy = max_per_cluster / total_instances
+            class_to_cluster_evals = class_to_cluster_evals.append(accuracy)
+
+            # Guardar pureza en el archivo
+            f.write(f"\n# Class-to-cluster evaluation para la variable {column}: {accuracy:.4f}\n")
+
             # Guardar la tabla de contingencia en el archivo
             f.write(f"\n# Tabla de contingencia para la variable {column}:\n")
             f.write(f"{contingency_table.to_string()}\n")
-
-            # Calcular el ARI
-            ari = adjusted_rand_score(binary_vars[column], clusters)
-            ari_scores.append(ari)
-
-            # Guardar el ARI en el archivo
-            f.write(f"# ARI para la variable {column}: {ari:.4f}\n")
-
-        # Calcular el ARI medio
-        mean_ari = sum(ari_scores) / len(ari_scores)
-        f.write(f"\n# ARI medio: {mean_ari:.4f}\n")
 
         # Guardar métricas de calidad
         if silhouette_avg is not None:
@@ -278,10 +285,4 @@ def evaluate_clusters(clusters, csv_file, output_file, eps, min_points, silhouet
 
     print(f"Tablas de contingencia y métricas de calidad guardadas en {output_file} correctamente.")
 
-    # Normalización de los resultados
-    normalized_ari = (mean_ari - 0) / (1 - 0)  # Normalizar ARI entre 0 y 1
-    normalized_silhouette = (silhouette_avg - (-1)) / (1 - (-1))  # Normalizar Silhouette Index entre 0 y 1
-    normalized_davies = (davies_bouldin - 0) / (2 - 0)  # Normalizar Davies-Bouldin entre 0 y 2
-
-    # Calcular el resultado final
-    return (normalized_ari + normalized_silhouette - normalized_davies) / 2  # Promediar las métricas normalizadas
+    return class_to_cluster_evals, silhouette_avg, davies_bouldin
