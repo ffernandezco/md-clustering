@@ -8,19 +8,20 @@ import model_final
 # ---- DESCOMENTAR PROCESOS QUE SE REQUIERAN ----
 
 # PREPROCESADO
-# input_file = 'data/DataI_MD.csv'  # Ruta al archivo CSV original
-# output_file = 'data/DataI_MD_POST.csv'
-# preprocess.preprocess(input_file, output_file)
-#
-#
-# # TOKENIZADO + VECTORIZACIÖN
-# input_csv_path = 'data/DataI_MD_POST.csv'
-# output_csv_path = 'data/DataI_MD_VECTOR.csv'
-# # Se puede especificar el modelo (por defecto: AIDA-UPM/BERTuit-base),
-# # from_tf (por defecto: True), la columna de procesado del csv de entrada (por defecto: 4)
-# # y el batch_size para repartir la carga de trabajo (por defecto: 64)
-# vectorize.vectorize(input_csv_path, output_csv_path, True)
-# preprocess.divide_csv('data/DataI_MD_VECTOR.csv', 'data/VECTOR_BERTuit90%.csv', 'data/VECTOR_test.csv', 90)
+input_file = 'data/DataI_MD.csv'  # Ruta al archivo CSV original
+output_file = 'data/DataI_MD_POST.csv'
+preprocess.preprocess(input_file, output_file)
+
+
+# TOKENIZADO + VECTORIZACIÖN
+input_csv_path = 'data/DataI_MD_POST.csv'
+output_csv_path = 'data/DataI_MD_VECTOR.csv'
+# Se puede especificar el modelo (por defecto: AIDA-UPM/BERTuit-base),
+# from_tf (por defecto: True), la columna de procesado del csv de entrada (por defecto: 4)
+# y el batch_size para repartir la carga de trabajo (por defecto: 64)
+vectorize.vectorize(input_csv_path, output_csv_path, True)
+preprocess.divide_csv('data/DataI_MD_VECTOR.csv', 'data/VECTOR_BERTuit90%.csv', 'data/VECTOR_test.csv', 90)
+preprocess.divide_csv('data/DataI_MD_POST.csv', 'data/DataI_MD_POST90%.csv', 'data/DataI_MD_POST10%.csv', 90)
 
 
 # BUSCAR MEJOR CONFIGURACIÓN
@@ -40,19 +41,22 @@ best_configuration = {
 }
 
 # Probar diferentes configuraciones de PCA
-for n_components in [700, 500, 250, 100]:  # Cambia los valores según sea necesario
+for n_components in [100, 250, 500, 700]:  # Cambia los valores según sea necesario
     pca = PCA(n_components=n_components)
     reduced_instances = pca.fit_transform(instances)
 
     # Búsqueda de mejor configuración para eps y minPoints
-    for eps in np.arange(5, 25, 1):
+    for eps in np.arange(10, 25, 1):
         for minPoints in range(10, 60, 10):
             for metric in ["euclidean", "manhattan", "cosine"]:
                 # Entrenar el modelo y obtener las evaluaciones
-                clusters, class_to_cluster_evals, silhouette_avg, davies_bouldin = model_final.train(reduced_instances, "data/VECTOR_BERTuit90%.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + metric + "-evaluation.txt", eps, minPoints, metric)
+                clusters, evaluation = model_final.train(reduced_instances, "data/DataI_MD_POST90%.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + metric + "-evaluation.txt", eps, minPoints, metric)
+                class_to_cluster_evals = evaluation[0]
+                silhouette_avg = evaluation[1]
+                davies_bouldin = evaluation[2]
 
                 # Comparar con las mejores configuraciones
-                if silhouette_avg > best_score_silhouette:
+                if silhouette_avg is not None and silhouette_avg > best_score_silhouette:
                     best_score_silhouette = silhouette_avg
                     best_configuration["silhouette"] = {
                         'n_components': n_components,
@@ -61,7 +65,7 @@ for n_components in [700, 500, 250, 100]:  # Cambia los valores según sea neces
                         'metric': metric
                     }
 
-                if davies_bouldin < best_score_davies:
+                if davies_bouldin is not None and davies_bouldin < best_score_davies:
                     best_score_davies = davies_bouldin
                     best_configuration["davies"] = {
                         'n_components': n_components,
