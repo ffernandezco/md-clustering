@@ -263,7 +263,7 @@ def evaluate_clusters(clusters, csv_file, output_file, eps, min_points, silhouet
             total_instances = contingency_table.values.sum()
             max_per_cluster = contingency_table.max(axis=1).sum()
             accuracy = max_per_cluster / total_instances
-            class_to_cluster_evals = class_to_cluster_evals.append(accuracy)
+            class_to_cluster_evals.append(accuracy)
 
             # Guardar pureza en el archivo
             f.write(f"\n# Class-to-cluster evaluation para la variable {column}: {accuracy:.4f}\n")
@@ -285,4 +285,4 @@ def evaluate_clusters(clusters, csv_file, output_file, eps, min_points, silhouet
 
     print(f"Tablas de contingencia y métricas de calidad guardadas en {output_file} correctamente.")
 
-    return class_to_cluster_evals, silhouette_avg, davies_bouldin
+    return [class_to_cluster_evals, silhouette_avg, davies_bouldin]
