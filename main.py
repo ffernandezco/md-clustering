@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import MinMaxScaler
+
 import preprocess
 import vectorize
 import model_final
@@ -120,16 +122,22 @@ instances = model_final.read_csv("data/VECTOR_BERTuit90%.csv")
 #
 
 # AÑADIR COMPONENTE DE SENTIMIENTOS
-preprocess.divide_csv('data/topic_probabilities_with_sentiment.csv', 'data/topic_probabilities_with_sentiment90%.csv', 'data/topic_probabilities_with_sentiment10%.csv', 90, delimiter=",")
+preprocess.divide_csv('data/topic_probabilities_with_sentiment.csv', 'data/topic_probabilities_with_sentiment90%.csv', 'data/topic_probabilities_with_sentiment10%.csv', 0.9, delimiter=",")
 sentiments = pd.read_csv("data/topic_probabilities_with_sentiment90%.csv", header=None)
+instances = pd.read_csv("data/VECTOR_BERTuit90%.csv", header=None)
+scaler = MinMaxScaler()
+normalized_data = scaler.fit_transform(instances)
+instances = pd.DataFrame(normalized_data)
 sentiments = sentiments.iloc[:, 12:18]
 result = pd.concat([instances, sentiments], axis=1)
-eps = 15
-minPoints = 20
-n_components = None
-metric = "euclidean"
+n_components = 250
+pca = PCA(n_components=n_components)
+result = pca.fit_transform(result)
 
-clusters, evaluation = model_final.train(result, "data/DataI_MD_POST90%.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + metric + "-evaluationSENTIMENTS.txt", eps, minPoints, metric)
-model_final.plot_clusters(result, clusters, [eps, minPoints, metric], "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_plotSENTIMENTS.png")
-model_final.save_cluster_vectors_to_csv(result, clusters, 10, "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_vectorsSENTIMENTS.csv")
-model_final.save_cluster_texts_to_csv("result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_vectorsSENTIMENTS.csv", "data/DataI_MD_POST.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_textsSENTIMENTS.csv")
+for eps in np.arange(2, 5, 0.25):
+    for minPoints in range(10, 50, 10):
+        for metric in ["manhattan"]:
+            clusters, evaluation = model_final.train(result, "data/DataI_MD_POST90%.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + metric + "-evaluationSENTIMENTS.txt", eps, minPoints, metric)
+            model_final.plot_clusters(result, clusters, [eps, minPoints, metric], "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_plotSENTIMENTS.png")
+            model_final.save_cluster_vectors_to_csv(result, clusters, 10, "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_vectorsSENTIMENTS.csv")
+            model_final.save_cluster_texts_to_csv("result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_vectorsSENTIMENTS.csv", "data/DataI_MD_POST.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_textsSENTIMENTS.csv")
