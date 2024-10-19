@@ -133,4 +133,3 @@ clusters, evaluation = model_final.train(result, "data/DataI_MD_POST90%.csv", "r
 model_final.plot_clusters(result, clusters, [eps, minPoints, metric], "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_plotSENTIMENTS.png")
 model_final.save_cluster_vectors_to_csv(result, clusters, 10, "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_vectorsSENTIMENTS.csv")
 model_final.save_cluster_texts_to_csv("result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_vectorsSENTIMENTS.csv", "data/DataI_MD_POST.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_textsSENTIMENTS.csv")
-
