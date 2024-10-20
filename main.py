@@ -1,12 +1,11 @@
+import joblib
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
-from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
 
 import preprocess
-import vectorize
 import model_final
+from beta import add_pysentimiento
 
 # ---- DESCOMENTAR PROCESOS QUE SE REQUIERAN ----
 
@@ -14,21 +13,21 @@ import model_final
 # input_file = 'data/DataI_MD.csv'  # Ruta al archivo CSV original
 # output_file = 'data/DataI_MD_POST.csv'
 # preprocess.preprocess(input_file, output_file)
-
-
-# TOKENIZADO + VECTORIZACIÖN
+#
+#
+# # TOKENIZADO + VECTORIZACIÖN
 # input_csv_path = 'data/DataI_MD_POST.csv'
 # output_csv_path = 'data/DataI_MD_VECTOR.csv'
 # # Se puede especificar el modelo (por defecto: AIDA-UPM/BERTuit-base),
 # # from_tf (por defecto: True), la columna de procesado del csv de entrada (por defecto: 4)
 # # y el batch_size para repartir la carga de trabajo (por defecto: 64)
 # vectorize.vectorize(input_csv_path, output_csv_path, True)
-# preprocess.divide_csv('data/DataI_MD_VECTOR.csv', 'data/VECTOR_BERTuit90%.csv', 'data/VECTOR_test.csv', 90)
-# preprocess.divide_csv('data/DataI_MD_POST.csv', 'data/DataI_MD_POST90%.csv', 'data/DataI_MD_POST10%.csv', 90, delimiter="|")
+# preprocess.divide_csv('data/DataI_MD_VECTOR.csv', 'data/VECTOR_BERTuit90%.csv', 'data/VECTOR_test.csv', 0.9)
+# preprocess.divide_csv('data/DataI_MD_POST.csv', 'data/DataI_MD_POST90%.csv', 'data/DataI_MD_POST10%.csv', 0.9, delimiter="|")
 #
 #
 # # BUSCAR MEJOR CONFIGURACIÓN
-instances = model_final.read_csv("data/VECTOR_BERTuit90%.csv")
+# instances = model_final.read_csv("data/VECTOR_BERTuit90%.csv")
 # external_metrics = [1, 2, 3]
 # best_score_silhouette = -1
 # best_score_davies = float('inf')
@@ -119,25 +118,44 @@ instances = model_final.read_csv("data/VECTOR_BERTuit90%.csv")
 #     f.write("Mejores configuraciones:\n")
 #     for metric, config in best_configuration.items():
 #         f.write(f"{metric}: {config}\n")
-#
+
 
 # AÑADIR COMPONENTE DE SENTIMIENTOS
-preprocess.divide_csv('data/topic_probabilities_with_sentiment.csv', 'data/topic_probabilities_with_sentiment90%.csv', 'data/topic_probabilities_with_sentiment10%.csv', 0.9, delimiter=",")
-sentiments = pd.read_csv("data/topic_probabilities_with_sentiment90%.csv", header=None)
+add_pysentimiento.add("data/DataI_MD_POST.csv", "data/emotion_probs.csv")
+preprocess.divide_csv('data/emotion_probs.csv', 'data/emotion_probs90%.csv', 'data/emotion_probs10%.csv', 0.9, delimiter=",")
+sentiments = pd.read_csv("data/emotion_probs90%.csv")
 instances = pd.read_csv("data/VECTOR_BERTuit90%.csv", header=None)
 scaler = MinMaxScaler()
 normalized_data = scaler.fit_transform(instances)
 instances = pd.DataFrame(normalized_data)
-sentiments = sentiments.iloc[:, 12:18]
+# sentiments = sentiments.iloc[:, :]
 result = pd.concat([instances, sentiments], axis=1)
-n_components = 250
-pca = PCA(n_components=n_components)
-result = pca.fit_transform(result)
+n_components = None
+# pca = PCA(n_components=n_components)
+# result = pca.fit_transform(result)
 
-for eps in np.arange(2, 5, 0.25):
+for eps in np.arange(1.5, 4, 0.25):
     for minPoints in range(10, 50, 10):
-        for metric in ["manhattan"]:
+        for metric in ["euclidean"]:
             clusters, evaluation = model_final.train(result, "data/DataI_MD_POST90%.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + metric + "-evaluationSENTIMENTS.txt", eps, minPoints, metric)
             model_final.plot_clusters(result, clusters, [eps, minPoints, metric], "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_plotSENTIMENTS.png")
             model_final.save_cluster_vectors_to_csv(result, clusters, 10, "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_vectorsSENTIMENTS.csv")
             model_final.save_cluster_texts_to_csv("result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_vectorsSENTIMENTS.csv", "data/DataI_MD_POST.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_textsSENTIMENTS.csv")
+
+# CLASIFICAR
+test = pd.read_csv('data/VECTOR_test.csv')  # Ruta al archivo de tests
+neighbors_model = joblib.load('neighbors_model.pkl')
+labels = joblib.load('labels.pkl')
+
+# Encontrar vecinos de los nuevos puntos
+neighbors = neighbors_model.radius_neighbors(test, return_distance=False)
+
+# Inicializar etiquetas para los nuevos puntos
+new_labels = np.full(test.shape[0], -1, dtype=np.intp)
+
+# Asignar etiquetas basadas en los vecinos ya etiquetados
+for i, point_neighbors in enumerate(neighbors):
+    neighbor_labels = labels[point_neighbors]
+    if len(neighbor_labels) > 0:
+        # Asignar la etiqueta más común entre los vecinos
+        new_labels[i] = np.bincount(neighbor_labels[neighbor_labels != -1]).argmax()
