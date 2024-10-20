@@ -241,6 +241,11 @@ def evaluate_clusters(clusters, csv_file, output_file, eps, min_points, silhouet
     binary_vars = data.iloc[:, vars]
     class_to_cluster_evals = []
 
+    # Crear la carpeta de salida si no existe
+    output_dir = os.path.dirname(output_file)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     # Abrir el archivo de salida para escribir los resultados
     with open(output_file, 'w') as f:
         # Guardar la configuración actual
