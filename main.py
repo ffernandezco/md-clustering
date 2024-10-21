@@ -150,7 +150,7 @@ if best_configuration["global"]:
     pca = PCA(n_components=n_components)
     reduced_instances = pca.fit_transform(instances)
 
-    clusters, evaluation = model_brute_paralel.train(
+    clusters = model_brute_paralel.train(
         reduced_instances,
         eps, minPoints, True
     )

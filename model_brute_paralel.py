@@ -61,7 +61,7 @@ def train(all_points, min_distance=15, near_point_count=25, safe=True, output_mo
     if safe:
         with open(output_model, 'wb') as f:
             # Guardar ambos objetos (neighbors y labels)
-            pickle.dump((neighbors, labels), f)
+            pickle.dump((neighbors, labels, min_distance, near_point_count), f)
             print(f"Modelo guardado en '{output_model}' correctamente.")
 
     return labels
@@ -69,20 +69,21 @@ def train(all_points, min_distance=15, near_point_count=25, safe=True, output_mo
 
 def classify(test, input_model="model/neighbors_and_labels.pkl"):
     with open(input_model, 'rb') as f:
-        neighbors, labels = pickle.load(f)
+        neighbors, labels, min_distance, near_point_count = pickle.load(f)
         print(f"Modelo cargado desde '{input_model}' correctamente.")
-    # Encontrar vecinos de los nuevos puntos
-    neighbors = neighbors.radius_neighbors(test, return_distance=False)
-
     # Inicializar etiquetas para los nuevos puntos
     new_labels = np.full(test.shape[0], -1, dtype=np.intp)
 
-    # Asignar etiquetas basadas en los vecinos ya etiquetados
-    for i, point_neighbors in enumerate(neighbors):
+    # Recorrer los puntos de test y buscar vecinos manualmente
+    for i, test_point in enumerate(test):
+        point_neighbors = find_neighbors(test_point, neighbors, min_distance, near_point_count)
         neighbor_labels = labels[point_neighbors]
+
         if len(neighbor_labels) > 0:
             # Asignar la etiqueta más común entre los vecinos
             new_labels[i] = np.bincount(neighbor_labels[neighbor_labels != -1]).argmax()
+
+    return new_labels
 
 
 def plot_clusters(all_points, clusters, conf):
