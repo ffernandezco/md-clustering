@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
+
+import model_brute_paralel
 import preprocess
 import model_final
 import vectorize
@@ -138,6 +140,21 @@ with open("result/best_configuration.txt", "w") as f:
     for metric, config in best_configuration.items():
         f.write(f"{metric}: {config}\n")
 
+# Entrenar la mejor configuración
+if best_configuration["global"]:
+    n_components = best_configuration["global"]['n_components']
+    eps = best_configuration["global"]['eps']
+    minPoints = best_configuration["global"]['minPoints']
+
+    instances = model_final.read_csv("data/VECTOR_BERTuit90%.csv")
+    pca = PCA(n_components=n_components)
+    reduced_instances = pca.fit_transform(instances)
+
+    clusters, evaluation = model_brute_paralel.train(
+        reduced_instances,
+        eps, minPoints, True
+    )
+
 
 # AÑADIR COMPONENTE DE SENTIMIENTOS
 add_pysentimiento.add("data/DataI_MD_POST.csv", "data/emotion_probs.csv")
@@ -165,18 +182,6 @@ for eps in np.arange(1.5, 1.75, 0.25):
 
 # CLASIFICAR
 test = pd.read_csv('data/VECTOR_test.csv')  # Ruta al archivo de tests
-neighbors_model = joblib.load('neighbors_model.pkl')
-labels = joblib.load('labels.pkl')
+model_brute_paralel.classify(test)
 
-# Encontrar vecinos de los nuevos puntos
-neighbors = neighbors_model.radius_neighbors(test, return_distance=False)
 
-# Inicializar etiquetas para los nuevos puntos
-new_labels = np.full(test.shape[0], -1, dtype=np.intp)
-
-# Asignar etiquetas basadas en los vecinos ya etiquetados
-for i, point_neighbors in enumerate(neighbors):
-    neighbor_labels = labels[point_neighbors]
-    if len(neighbor_labels) > 0:
-        # Asignar la etiqueta más común entre los vecinos
-        new_labels[i] = np.bincount(neighbor_labels[neighbor_labels != -1]).argmax()
