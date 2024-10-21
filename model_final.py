@@ -1,8 +1,8 @@
 from collections import defaultdict, deque
+import joblib
 import numpy as np
 import pandas as pd
-from scipy.stats import chi2_contingency
-from sklearn.metrics import adjusted_rand_score, silhouette_score, davies_bouldin_score
+from sklearn.metrics import silhouette_score, davies_bouldin_score
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -22,7 +22,7 @@ def read_csv(input_vector_path):
     return data.values
 
 
-def train(all_points, csv_file, output_file, min_distance=15, near_point_count=25, metric="euclidean"):
+def train(all_points, csv_file, output_file, min_distance=15, near_point_count=25, metric="euclidean", save=False):
     """
     Entrena el modelo de clustering utilizando el algoritmo DBSCAN y calcula las métricas de calidad.
     :param all_points: numpy.ndarray
@@ -85,6 +85,10 @@ def train(all_points, csv_file, output_file, min_distance=15, near_point_count=2
 
     # Evaluar clusters
     evaluation = evaluate_clusters(labels, csv_file, output_file, min_distance, near_point_count, silhouette_avg, davies_bouldin, metric)
+
+    if save:
+        joblib.dump(neighbors_model, 'model/neighbors_model.pkl')
+        joblib.dump(labels, 'model/labels.pkl')
 
     return labels, evaluation
 
@@ -241,10 +245,6 @@ def evaluate_clusters(clusters, csv_file, output_file, eps, min_points, silhouet
     binary_vars = data.iloc[:, vars]
     class_to_cluster_evals = []
 
-    # Crear la carpeta de salida si no existe
-    output_dir = os.path.dirname(output_file)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
 
     # Abrir el archivo de salida para escribir los resultados
     with open(output_file, 'w') as f:

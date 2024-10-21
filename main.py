@@ -1,3 +1,4 @@
+import os
 import joblib
 import numpy as np
 import pandas as pd
@@ -6,17 +7,23 @@ from sklearn.preprocessing import MinMaxScaler
 import preprocess
 import model_final
 import vectorize
-from beta import add_pysentimiento
+import add_pysentimiento
 
 # ---- DESCOMENTAR PROCESOS QUE SE REQUIERAN ----
 
+# Crear carpetas necesarias (data, result)
+if not os.path.exists("data/"):
+    os.makedirs("data/")
+if not os.path.exists("result/"):
+    os.makedirs("result/")
+
 # PREPROCESADO
-input_file = 'data/DataI_MD.csv'  # Ruta al archivo CSV original
+input_file = 'data/DataI_MD.csv'  # <--- Añadir aquí la ruta al archivo CSV original!!
 output_file = 'data/DataI_MD_POST.csv'
 preprocess.preprocess(input_file, output_file)
 
 
-# TOKENIZADO + VECTORIZACIÖN
+# TOKENIZADO + VECTORIZACIÓN
 input_csv_path = 'data/DataI_MD_POST.csv'
 output_csv_path = 'data/DataI_MD_VECTOR.csv'
 # Se puede especificar el modelo (por defecto: AIDA-UPM/BERTuit-base),
@@ -44,14 +51,14 @@ best_configuration = {
 }
 
 # Probar diferentes configuraciones de PCA
-for n_components in [700, 500, 250, 100]:  # Cambia los valores según sea necesario
+for n_components in [90]:  # Cambia los valores según sea necesario
     pca = PCA(n_components=n_components)
     reduced_instances = pca.fit_transform(instances)
 
     # Búsqueda de mejor configuración para eps y minPoints
-    for eps in np.arange(57, 70, 1):
-        for minPoints in range(10, 60, 10):
-            for metric in ["manhattan"]:
+    for eps in np.arange(15, 16, 1):
+        for minPoints in range(10, 20, 10):
+            for metric in ["euclidean"]:
                 # Entrenar el modelo y obtener las evaluaciones
                 clusters, evaluation = model_final.train(reduced_instances, "data/DataI_MD_POST90%.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + metric + "-evaluation.txt", eps, minPoints, metric)
                 class_to_cluster_evals = evaluation[0]
@@ -125,12 +132,13 @@ with open("result/best_configuration.txt", "w") as f:
 add_pysentimiento.add("data/DataI_MD_POST.csv", "data/emotion_probs.csv")
 preprocess.divide_csv('data/emotion_probs.csv', 'data/emotion_probs90%.csv', 'data/emotion_probs10%.csv', 0.9, delimiter=",")
 sentiments = pd.read_csv("data/emotion_probs90%.csv")
+sentiments = sentiments.iloc[:, 1:]
 instances = pd.read_csv("data/VECTOR_BERTuit90%.csv", header=None)
 scaler = MinMaxScaler()
 normalized_data = scaler.fit_transform(instances)
 instances = pd.DataFrame(normalized_data)
-# sentiments = sentiments.iloc[:, :]
 result = pd.concat([instances, sentiments], axis=1)
+result.to_csv("data/VECTOR_BERTuit+emotion_probs90%.csv")
 n_components = None
 # pca = PCA(n_components=n_components)
 # result = pca.fit_transform(result)
