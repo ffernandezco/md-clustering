@@ -288,6 +288,8 @@ def evaluate_clusters(clusters, csv_file, output_file, eps, min_points, silhouet
         else:
             f.write("# Davies-Bouldin Index: No se puede calcular, solo un cluster.\n")
 
+        n_clusters = len(set(clusters))
+
     print(f"Tablas de contingencia y métricas de calidad guardadas en {output_file} correctamente.")
 
-    return [class_to_cluster_evals, silhouette_avg, davies_bouldin]
+    return [class_to_cluster_evals, silhouette_avg, davies_bouldin, n_clusters]
