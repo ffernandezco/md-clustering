@@ -42,6 +42,7 @@ best_score_davies = float('inf')
 best_score_var1 = 0
 best_score_var2 = 0
 best_score_var3 = 0
+best_score_global = -float('inf')
 best_configuration = {
     "silhouette": None,
     "davies": None,
@@ -64,6 +65,7 @@ for n_components in [90]:  # Cambia los valores según sea necesario
                 class_to_cluster_evals = evaluation[0]
                 silhouette_avg = evaluation[1]
                 davies_bouldin = evaluation[2]
+                n_clusters =  evaluation[3]
 
                 # Comparar con las mejores configuraciones
                 if silhouette_avg is not None and silhouette_avg > best_score_silhouette:
@@ -111,6 +113,15 @@ for n_components in [90]:  # Cambia los valores según sea necesario
                         'metric': metric
                     }
 
+                if class_to_cluster_evals[0] + class_to_cluster_evals[1] + class_to_cluster_evals[2] + 1.5 * n_clusters + silhouette_avg - davies_bouldin > best_score_global:
+                    best_score_global = class_to_cluster_evals[0] + class_to_cluster_evals[1] + class_to_cluster_evals[2] + 1.5 * n_clusters + silhouette_avg - davies_bouldin
+                    best_configuration["global"] = {
+                        'n_components': n_components,
+                        'eps': eps,
+                        'minPoints': minPoints,
+                        'metric': metric
+                    }
+
                 # Guardar los resultados y gráficos
                 model_final.plot_clusters(reduced_instances, clusters, [eps, minPoints, metric], "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_plot.png")
                 model_final.save_cluster_vectors_to_csv(reduced_instances, clusters, 10, "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_vectors.csv")
@@ -137,7 +148,7 @@ instances = pd.read_csv("data/VECTOR_BERTuit90%.csv", header=None)
 scaler = MinMaxScaler()
 normalized_data = scaler.fit_transform(instances)
 instances = pd.DataFrame(normalized_data)
-result = pd.concat([instances, sentiments], axis=1)
+result = pd.concat([instances, sentiments], axis=1, ignore_index=True)
 result.to_csv("data/VECTOR_BERTuit+emotion_probs90%.csv")
 n_components = None
 # pca = PCA(n_components=n_components)
