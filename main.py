@@ -131,7 +131,7 @@ with open("result/best_configuration.txt", "w") as f:
 # AÑADIR COMPONENTE DE SENTIMIENTOS
 add_pysentimiento.add("data/DataI_MD_POST.csv", "data/emotion_probs.csv")
 preprocess.divide_csv('data/emotion_probs.csv', 'data/emotion_probs90%.csv', 'data/emotion_probs10%.csv', 0.9, delimiter=",")
-sentiments = pd.read_csv("data/emotion_probs90%.csv")
+sentiments = pd.read_csv("data/emotion_probs90%.csv", header=None)
 sentiments = sentiments.iloc[:, 1:]
 instances = pd.read_csv("data/VECTOR_BERTuit90%.csv", header=None)
 scaler = MinMaxScaler()
@@ -143,8 +143,8 @@ n_components = None
 # pca = PCA(n_components=n_components)
 # result = pca.fit_transform(result)
 
-for eps in np.arange(1.5, 4, 0.25):
-    for minPoints in range(10, 50, 10):
+for eps in np.arange(1.5, 1.75, 0.25):
+    for minPoints in range(10, 20, 10):
         for metric in ["euclidean"]:
             clusters, evaluation = model_final.train(result, "data/DataI_MD_POST90%.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + metric + "-evaluationSENTIMENTS.txt", eps, minPoints, metric)
             model_final.plot_clusters(result, clusters, [eps, minPoints, metric], "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_plotSENTIMENTS.png")

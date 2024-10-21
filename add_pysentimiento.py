@@ -41,8 +41,6 @@ def add(input_file, output_file):
     # Guardar resultados en un archivo CSV
     with open(output_file, "w", newline='') as file:
         writer = csv.writer(file)
-        header = ["id"] + [f"prob_{emotion}" for emotion in emotion_order]
-        writer.writerow(header)  # Escribir el encabezado
         for id in range(len(data)):
             rounded_emotions = [round(prob, 5) for prob in emotion_probabilities[id]]
             writer.writerow([id] + rounded_emotions)
