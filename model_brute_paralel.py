@@ -1,3 +1,4 @@
+import pickle
 from collections import defaultdict, deque
 import numpy as np
 import pandas as pd
@@ -7,20 +8,24 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from joblib import Parallel, delayed
 
+
 def read_csv(input_vector_path):
     # Cargar datos
     data = pd.read_csv(input_vector_path, header=None, delimiter=',')
     return data.values
 
+
 def euclidean_distance(a, b):
     return np.linalg.norm(a - b)
+
 
 def find_neighbors(point, all_points, min_distance, near_point_count):
     distances = np.linalg.norm(all_points - point, axis=1)
     nearest_indices = np.argsort(distances)[:near_point_count]
     return [idx for idx in nearest_indices if distances[idx] <= min_distance]
 
-def train(all_points, min_distance=15, near_point_count=25, n_jobs=-1):
+
+def train(all_points, min_distance=15, near_point_count=25, safe=True, output_model="model/neighbors_and_labels.pkl", n_jobs=-1):
     # Encontrar vecinos para cada punto usando paralelización
     neighbors = Parallel(n_jobs=n_jobs)(
         delayed(find_neighbors)(point, all_points, min_distance, near_point_count)
@@ -53,7 +58,31 @@ def train(all_points, min_distance=15, near_point_count=25, n_jobs=-1):
 
         label_num += 1  # Incrementar el contador de etiquetas para el siguiente cluster
 
+    if safe:
+        with open(output_model, 'wb') as f:
+            # Guardar ambos objetos (neighbors y labels)
+            pickle.dump((neighbors, labels), f)
+            print(f"Modelo guardado en '{output_model}' correctamente.")
+
     return labels
+
+
+def classify(test, input_model="model/neighbors_and_labels.pkl"):
+    with open(input_model, 'rb') as f:
+        neighbors, labels = pickle.load(f)
+        print(f"Modelo cargado desde '{input_model}' correctamente.")
+    # Encontrar vecinos de los nuevos puntos
+    neighbors = neighbors.radius_neighbors(test, return_distance=False)
+
+    # Inicializar etiquetas para los nuevos puntos
+    new_labels = np.full(test.shape[0], -1, dtype=np.intp)
+
+    # Asignar etiquetas basadas en los vecinos ya etiquetados
+    for i, point_neighbors in enumerate(neighbors):
+        neighbor_labels = labels[point_neighbors]
+        if len(neighbor_labels) > 0:
+            # Asignar la etiqueta más común entre los vecinos
+            new_labels[i] = np.bincount(neighbor_labels[neighbor_labels != -1]).argmax()
 
 
 def plot_clusters(all_points, clusters, conf):
