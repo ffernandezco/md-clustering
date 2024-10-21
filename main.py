@@ -151,6 +151,7 @@ for eps in np.arange(1.5, 1.75, 0.25):
             model_final.save_cluster_vectors_to_csv(result, clusters, 10, "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_vectorsSENTIMENTS.csv")
             model_final.save_cluster_texts_to_csv("result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_vectorsSENTIMENTS.csv", "data/DataI_MD_POST.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_textsSENTIMENTS.csv")
 
+
 # CLASIFICAR
 test = pd.read_csv('data/VECTOR_test.csv')  # Ruta al archivo de tests
 neighbors_model = joblib.load('neighbors_model.pkl')
