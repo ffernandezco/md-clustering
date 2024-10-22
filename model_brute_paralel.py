@@ -6,7 +6,7 @@ import time
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, dump, load
 
 
 def read_csv(input_vector_path):
@@ -60,8 +60,7 @@ def train(all_points, min_distance=15, near_point_count=25, safe=True, output_mo
 
     if safe:
         with open(output_model, 'wb') as f:
-            # Guardar ambos objetos (neighbors y labels)
-            pickle.dump((labels, min_distance, near_point_count), f)
+            dump((labels, min_distance, near_point_count), output_model)
             print(f"Modelo guardado en '{output_model}' correctamente.")
 
     return labels
@@ -69,7 +68,7 @@ def train(all_points, min_distance=15, near_point_count=25, safe=True, output_mo
 
 def classify(test, input_model="model/neighbors_and_labels.pkl", n_jobs=-1):
     with open(input_model, 'rb') as f:
-        labels, min_distance, near_point_count = pickle.load(f)
+        labels, min_distance, near_point_count = load(input_model)
         print(f"Modelo cargado desde '{input_model}' correctamente.")
 
     all_points = read_csv("data/VECTOR_BERTuit90%.csv")
