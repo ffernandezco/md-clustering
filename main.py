@@ -174,8 +174,8 @@ n_components = None
 # pca = PCA(n_components=n_components)
 # result = pca.fit_transform(result)
 
-for eps in np.arange(1.5, 1.75, 0.25):
-    for minPoints in range(10, 20, 10):
+for eps in np.arange(1.5, 4, 0.25):
+    for minPoints in range(10, 50, 10):
         for metric in ["euclidean"]:
             clusters, evaluation = model_final.train(result, "data/DataI_MD_POST90%.csv", "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + metric + "-evaluationSENTIMENTS.txt", eps, minPoints, metric)
             model_final.plot_clusters(result, clusters, [eps, minPoints, metric], "result/" + str(n_components) + "-" + str(eps) + "-" + str(minPoints) + "-" + str(metric) + "cluster_plotSENTIMENTS.png")
