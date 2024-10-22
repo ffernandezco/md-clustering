@@ -25,7 +25,7 @@ def find_neighbors(point, all_points, min_distance, near_point_count):
     return [idx for idx in nearest_indices if distances[idx] <= min_distance]
 
 
-def train(all_points, min_distance=15, near_point_count=25, safe=True, output_model="model/neighbors_and_labels.pkl", n_jobs=-1):
+def train(all_points, min_distance=15, near_point_count=25, safe=True, output_model="model/neighbors_and_labels.pkl", n_jobs=2):
     # Encontrar vecinos para cada punto usando paralelización
     neighbors = Parallel(n_jobs=n_jobs)(
         delayed(find_neighbors)(point, all_points, min_distance, near_point_count)
@@ -61,29 +61,40 @@ def train(all_points, min_distance=15, near_point_count=25, safe=True, output_mo
     if safe:
         with open(output_model, 'wb') as f:
             # Guardar ambos objetos (neighbors y labels)
-            pickle.dump((neighbors, labels, min_distance, near_point_count), f)
+            pickle.dump((labels, min_distance, near_point_count), f)
             print(f"Modelo guardado en '{output_model}' correctamente.")
 
     return labels
 
 
-def classify(test, input_model="model/neighbors_and_labels.pkl"):
+def classify(test, input_model="model/neighbors_and_labels.pkl", n_jobs=-1):
     with open(input_model, 'rb') as f:
-        neighbors, labels, min_distance, near_point_count = pickle.load(f)
+        labels, min_distance, near_point_count = pickle.load(f)
         print(f"Modelo cargado desde '{input_model}' correctamente.")
-    # Inicializar etiquetas para los nuevos puntos
-    new_labels = np.full(test.shape[0], -1, dtype=np.intp)
 
-    # Recorrer los puntos de test y buscar vecinos manualmente
-    for i, test_point in enumerate(test):
-        point_neighbors = find_neighbors(test_point, neighbors, min_distance, near_point_count)
-        neighbor_labels = labels[point_neighbors]
+    all_points = read_csv("data/VECTOR_BERTuit90%.csv")
 
-        if len(neighbor_labels) > 0:
-            # Asignar la etiqueta más común entre los vecinos
-            new_labels[i] = np.bincount(neighbor_labels[neighbor_labels != -1]).argmax()
+    # Encontrar vecinos para cada punto usando paralelización
+    neighbors = Parallel(n_jobs=n_jobs)(
+        delayed(find_neighbors)(point, all_points, min_distance, near_point_count)
+        for point in tqdm(test.values, desc="Finding neighbors")
+    )
 
-    return new_labels
+    def assign_cluster(neighbors_indices, labels):
+        if neighbors_indices == -1:
+            return -1  # Ruido
+        # Extraemos las etiquetas de los vecinos
+        neighbor_labels = labels[neighbors_indices]
+        # Nos quedamos con la etiqueta mayoritaria, ignorando los -1 (ruido)
+        unique_labels, counts = np.unique(neighbor_labels[neighbor_labels != -1], return_counts=True)
+        if len(unique_labels) > 0:
+            return unique_labels[np.argmax(counts)]  # Cluster mayoritario
+        else:
+            return -1  # Si no hay vecinos con etiqueta válida, también se considera ruido
+
+    predicted_labels = [assign_cluster(n, labels) for n in neighbors]
+
+    return predicted_labels
 
 
 def plot_clusters(all_points, clusters, conf):
