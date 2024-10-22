@@ -27,10 +27,20 @@ def find_neighbors(point, all_points, min_distance, near_point_count):
 
 def train(all_points, min_distance=15, near_point_count=25, safe=True, output_model="model/neighbors_and_labels.pkl", n_jobs=2):
     # Encontrar vecinos para cada punto usando paralelización
-    neighbors = Parallel(n_jobs=n_jobs)(
-        delayed(find_neighbors)(point, all_points, min_distance, near_point_count)
-        for point in tqdm(all_points, desc="Finding neighbors")
-    )
+    neighbor_matrix = {}
+    num_vectors = len(all_points)
+
+    for i in tqdm(range(num_vectors), desc="Buscando vecinos"):
+        neighbors = []
+        for j in range(num_vectors):
+            if i != j:  # No comparar el vector consigo mismo
+                # Calcular la distancia entre el vector i y el vector j
+                distance = np.linalg.norm(all_points[i] - all_points[j])
+                if distance <= near_point_count:
+                    neighbors.append(j)
+        neighbor_matrix[i] = neighbors
+
+    neighbors = neighbor_matrix
 
     # Inicialmente, todas las muestras son ruido.
     labels = np.full(all_points.shape[0], -1, dtype=np.intp)
