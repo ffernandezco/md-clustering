@@ -35,7 +35,7 @@ def train(all_points, min_distance=15, near_point_count=25, safe=True, output_mo
     # Inicialmente, todas las muestras son ruido.
     labels = np.full(all_points.shape[0], -1, dtype=np.intp)
     # Una lista de todos los puntos centrales encontrados.
-    core_points = np.array([len(n) >= near_point_count for n in neighbors], dtype=bool)
+    core_points = np.array([len(n) >= near_point_count for n in neighbors], dtype=np.uint8)
 
     label_num = 0  # Contador de etiquetas
     for i in tqdm(range(labels.shape[0]), desc="Clustering"):
