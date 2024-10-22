@@ -25,27 +25,28 @@ def find_neighbors(point, all_points, min_distance, near_point_count):
     return [idx for idx in nearest_indices if distances[idx] <= min_distance]
 
 
-def train(all_points, min_distance=15, near_point_count=25, safe=True, output_model="model/neighbors_and_labels.pkl", n_jobs=2):
-    # Encontrar vecinos para cada punto usando paralelización
+def train(all_points, min_distance=15, near_point_count=25, safe=True, output_model="model/neighbors_and_labels.pkl"):
     neighbor_matrix = {}
     num_vectors = len(all_points)
+    near_points_count = np.zeros(num_vectors, dtype=int)  # Para contar los vecinos de cada punto
 
+    # Buscar vecinos para cada punto
     for i in tqdm(range(num_vectors), desc="Buscando vecinos"):
         neighbors = []
         for j in range(num_vectors):
             if i != j:  # No comparar el vector consigo mismo
                 # Calcular la distancia entre el vector i y el vector j
                 distance = np.linalg.norm(all_points[i] - all_points[j])
-                if distance <= near_point_count:
+                if distance <= min_distance:
                     neighbors.append(j)
         neighbor_matrix[i] = neighbors
+        near_points_count[i] = len(neighbors)  # Contar los vecinos del punto i
 
-    neighbors = neighbor_matrix
+    # Determinar los core points usando near_point_count
+    core_points = np.asarray(near_points_count >= near_point_count, dtype=np.uint8)
 
     # Inicialmente, todas las muestras son ruido.
     labels = np.full(all_points.shape[0], -1, dtype=np.intp)
-    # Una lista de todos los puntos centrales encontrados.
-    core_points = np.array([len(n) >= near_point_count for n in neighbors], dtype=np.uint8)
 
     label_num = 0  # Contador de etiquetas
     for i in tqdm(range(labels.shape[0]), desc="Clustering"):
@@ -60,7 +61,7 @@ def train(all_points, min_distance=15, near_point_count=25, safe=True, output_mo
             current_point = stack.pop()
 
             # Procesar los vecinos del punto actual
-            for neighbor in neighbors[current_point]:
+            for neighbor in neighbor_matrix[current_point]:
                 if labels[neighbor] == -1:  # Si es ruido
                     labels[neighbor] = label_num  # Etiquetar como parte del cluster
                     if core_points[neighbor]:  # Si es un punto núcleo
