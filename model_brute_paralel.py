@@ -43,7 +43,7 @@ def train(all_points, min_distance=15, near_point_count=25, safe=True, output_mo
         near_points_count[i] = len(neighbors)  # Contar los vecinos del punto i
 
     # Determinar los core points usando near_point_count
-    core_points = np.asarray(near_points_count >= near_point_count, dtype=np.uint8)
+    core_points = np.asarray(near_points_count >= near_point_count - 1, dtype=np.uint8)
 
     # Inicialmente, todas las muestras son ruido.
     labels = np.full(all_points.shape[0], -1, dtype=np.intp)
@@ -86,7 +86,7 @@ def classify(test, input_model="model/neighbors_and_labels.pkl", n_jobs=-1):
 
     # Encontrar vecinos para cada punto usando paralelización
     neighbors = Parallel(n_jobs=n_jobs)(
-        delayed(find_neighbors)(point, all_points, min_distance, near_point_count)
+        delayed(find_neighbors)(point, all_points, min_distance, near_point_count + 1)
         for point in tqdm(test.values, desc="Finding neighbors")
     )
 
