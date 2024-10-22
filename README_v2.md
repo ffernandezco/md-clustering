@@ -23,7 +23,7 @@ Para poder ejecutar todo el código del proyecto, es necesario instalar las sigu
 - [tf-keras](https://www.tensorflow.org/api_docs/python/tf/keras)
 - [pysentimiento](https://github.com/pysentimiento/pysentimiento)
 
-Adicionalmente, será necesario crear el directorio `data` en la raíz del proyecto, que deberá contener el fichero `DataI_MD.csv` que puede obtenerse de la plataforma eGela y que no ha sido incluido con la finalidad de evitar posibles problemas relacionados con la difusión de datos privados. También será necesario incluir un directorio `result`, en el que se irán almacenando los diferentes resultados asociados.
+Adicionalmente, será necesario crear el directorio `data` en la raíz del proyecto, que deberá contener el fichero `DataI_MD.csv` que puede obtenerse de la plataforma eGela y que no ha sido incluido con la finalidad de evitar posibles problemas relacionados con la difusión de datos privados. También será necesario incluir un directorio `result` y `model`, en el que se irán almacenando los diferentes resultados y modelos asociados.
 
 A grandes rasgos, asumiendo que se cuenta con Python 3 instalado en el equipo, los comandos a ejecutar en una terminal para poder ejecutar todo el proyecto serían los siguientes:
 ```
@@ -33,6 +33,7 @@ pip install numpy pandas transformers torch tqdm scikit-learn matplotlib tensorf
 mkdir data
 mv DataI_MD.csv data
 mkdir result
+mkdir model
 python3 main.py
 ```
 
@@ -44,4 +45,4 @@ El proyecto Python se basa en la siguiente estructura:
 * **Análisis de sentimientos (`add_pysentimiento.py`)**: añade también un análisis de emociones basado en _[pysentimiento](https://github.com/pysentimiento/pysentimiento)_. En la documentación se ofrece información adicional sobre la utilidad de añadir los vectores.
 * **Clasificación de resultados (`model_brute_paralel.py`)**: clasifica nuevos datos utilizando el modelo y basándose en la fuerza bruta, permitiendo ver y guardar los resultados.
 
-Adicionalmente, puede hacerse uso de modelos alternativos como `model_lsh.py`, sobre el que se ofrece más información en la documentación. Estos modelos ofrecen buenos resultados pero son más lentos a la hora de ser ejecutados.
+Adicionalmente, puede hacerse uso de modelos alternativos como `model_lsh.py`, sobre el que se ofrece más información en la documentación. Estos modelos ofrecen peores resultados pero son más rápidos a la hora de ser ejecutados.
